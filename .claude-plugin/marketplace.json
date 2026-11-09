@@ -1,0 +1,29 @@
+{
+  "name": "sdsc-marketplace",
+  "owner": {
+    "name": "San Diego Supercomputer Center"
+  },
+  "metadata": {
+    "description": "Agent skills and plugins for SDSC systems. Starts with the National Research Platform (Nautilus); other SDSC systems to follow.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "nrp-nautilus",
+      "description": "Run work on the National Research Platform's Nautilus Kubernetes cluster: access, NRP usage policies, Jobs and Indexed Jobs, GPUs, Ceph storage and S3, the managed LLM endpoint, and the patterns that keep a shared cluster healthy.",
+      "version": "0.1.0",
+      "source": "./plugins/nrp-nautilus",
+      "keywords": [
+        "NRP",
+        "Nautilus",
+        "SDSC",
+        "Kubernetes",
+        "kubectl",
+        "Jobs",
+        "GPU",
+        "Ceph",
+        "S3"
+      ]
+    }
+  ]
+}
