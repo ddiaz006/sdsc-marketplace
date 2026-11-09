@@ -6,7 +6,8 @@ description: >-
   kubelogin, nrp.ai/config, namespaces), following NRP policies (request/limit
   ratio, no sleep in Jobs, 6-hour pods, 2-week Deployments), requesting GPUs
   (gpu.product affinity, nvidia.com/a100, opportunistic), using Ceph storage
-  or S3, or the managed LLM endpoint ellm.nrp-nautilus.io.
+  or S3, getting local code or data into a Job, or the managed LLM endpoint
+  ellm.nrp-nautilus.io.
 compatibility: Requires kubectl and the kubelogin (oidc-login) plugin on the local machine, an NRP account, and membership in an NRP namespace. No login node or SSH is involved.
 metadata:
   version: "1.0"
@@ -47,6 +48,15 @@ For general Kubernetes (Job fields, Indexed Jobs, debugging) also load the
 
 > **Deployments cannot request GPUs and are deleted after 2 weeks.** Bare
 > pods (no controller) are deleted after 6 hours. Use Jobs for computation.
+
+> **Never put code, data or files in a ConfigMap or Secret.** Every
+> ConfigMap and Secret lives in the etcd database that the whole cluster's
+> control plane shares. On NRP, large ConfigMaps have filled etcd and taken
+> the API server down for every user. A ConfigMap is for a few KB of
+> settings. Code goes in a git repository cloned by an init container
+> (`assets/templates/job-git.yaml`) or in a container image; input data goes
+> on a PVC or in Ceph S3 (see Storage). Never split a large file across
+> several ConfigMaps to get under the 1 MiB limit.
 
 ## Access
 
@@ -144,6 +154,12 @@ Put compute in the same region as its storage: node affinity on
 `topology.kubernetes.io/region`. Details and in-cluster S3 endpoints:
 `references/storage.md`.
 
+**Input files from your machine** (a dataset, a model, a script that is not
+in git): create a PVC, copy the files onto it through a small helper pod with
+`kubectl cp`, delete the helper, then mount the PVC in the Job. For data
+larger than a few GB, use S3 instead. Never a ConfigMap. Step by step:
+`references/storage.md` → "Getting Local Files to a Job".
+
 ## Managed LLM Endpoint
 
 NRP hosts open-weights LLMs behind an OpenAI-compatible API, with no pod or
@@ -173,6 +189,8 @@ GPU of your own:
 - Use Jobs with `ttlSecondsAfterFinished` and `activeDeadlineSeconds`. Delete interactive pods as soon as you are done.
 - Do not add tolerations for reserved nodes (`nautilus.io/reservation`) unless the user's namespace is entitled to them.
 - Never print or write credential values (S3 keys, LLM tokens, kubeconfig tokens). Use Secrets.
+- Keep ConfigMaps to small settings files. Before you create one, check its size: `kubectl create configmap <name> --from-file=<f> --dry-run=client -o yaml | wc -c`. Over ~100 KB is a sign it holds code or data; use git, an image, a PVC or S3 instead.
+- Delete what you created when the work is done: Jobs (or rely on their TTL), helper pods, ConfigMaps, and PVCs you no longer need.
 
 ## Monitoring and Help
 

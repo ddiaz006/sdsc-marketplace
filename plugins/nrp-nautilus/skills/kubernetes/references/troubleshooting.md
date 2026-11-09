@@ -67,6 +67,19 @@ requests, a forbidden image, a GPU in a Deployment. Fix the manifest; do not
 retry unchanged.
 
 ```
+The ConfigMap "..." is invalid: []: Too long: must have at most 1048576 bytes
+The ConfigMap "..." is invalid: metadata.annotations: Too long: must have at most 262144 bytes
+etcdserver: request is too large
+```
+
+The object holds code or data. These limits protect etcd, the database the
+whole control plane shares; do not get around them by splitting the file,
+switching from `apply` to `create`, or using `--server-side`. Move the content
+out of the ConfigMap: code into git (clone it in an init container) or an
+image, data onto a PVC (`kubectl cp` through a helper pod) or into S3. See
+`storage-and-data.md` → "Moving Data".
+
+```
 Error from server (Forbidden): jobs.batch is forbidden: User "..." cannot create resource ...
 ```
 

@@ -5,7 +5,8 @@ description: >-
   Job, Indexed Job (job array), Pod, PVC, ConfigMap or Secret manifests,
   setting CPU/memory/GPU requests and limits, monitoring with get, describe,
   logs and events, debugging Pending, CrashLoopBackOff, ImagePullBackOff or
-  OOMKilled pods, or translating a Slurm/PBS workflow to Kubernetes.
+  OOMKilled pods, getting local code or data into a pod or Job, or
+  translating a Slurm/PBS workflow to Kubernetes.
 compatibility: Requires kubectl in PATH and a kubeconfig with access to at least one namespace. No login node is needed; kubectl runs from the local machine.
 metadata:
   version: "1.0"
@@ -139,16 +140,33 @@ Full template: `assets/templates/indexed-job.yaml`.
 - **PVC** is persistent storage that outlives pods. `ReadWriteOnce` volumes mount on one node at a time; `ReadWriteMany` (CephFS, NFS) can be mounted by many pods.
 - **Object storage (S3)** is usually best for inputs and results moved to and from your machine.
 - Code from git: clone it in an `initContainer` into an `emptyDir`, then run it in the main container.
+- Local files to a Job: put them on a PVC through a helper pod (`kubectl cp`), then mount the PVC in the Job. Never in a ConfigMap (see below).
 
 See `references/storage-and-data.md`.
 
 ## Configuration and Secrets
 
-Put settings in a ConfigMap and credentials in a Secret, then expose them as
-environment variables (`envFrom`, `secretKeyRef`) or files. Create Secrets
-from files or literals with `kubectl create secret generic …`; never write
-credential values into a manifest that is committed to git. Anyone who can
-read Secrets in the namespace can read their values.
+Put small settings in a ConfigMap and credentials in a Secret, then expose
+them as environment variables (`envFrom`, `secretKeyRef`) or files. Create
+Secrets from files or literals with `kubectl create secret generic …`; never
+write credential values into a manifest that is committed to git. Anyone who
+can read Secrets in the namespace can read their values.
+
+> **ConfigMaps and Secrets are not file storage.** Both are stored in etcd,
+> the cluster's control-plane database, which every user shares. Each object
+> is capped at 1 MiB, and large ones bloat etcd and slow or stop the API
+> server for the whole cluster. Keep a ConfigMap to a few KB of settings.
+
+| You want to ship | Use | Not |
+|---|---|---|
+| Your code | Git repo cloned by an init container, or a container image | ConfigMap with `--from-file=script.py` |
+| Input data, models, archives | PVC filled with `kubectl cp` through a helper pod, or S3 | ConfigMap, Secret, base64 in env vars |
+| A file over 1 MiB | PVC or S3 | Several ConfigMaps holding the pieces |
+| Settings (a few KB of YAML/INI/env) | ConfigMap | — |
+
+Check a ConfigMap's size before you create it:
+`kubectl create configmap <name> --from-file=<f> --dry-run=client -o yaml | wc -c`.
+More than ~100 KB means it holds code or data.
 
 ## Troubleshooting
 
@@ -172,6 +190,8 @@ More: `references/troubleshooting.md`.
 - Use a Job, not a bare Pod, for batch work: Jobs retry and record completion.
 - Clean up: `ttlSecondsAfterFinished` on Jobs, and `kubectl delete` pods you no longer need. Requested GPUs stay reserved while the pod exists.
 - Before you apply to a shared cluster, show the user the manifest and the resources it requests.
+- Never put code, data or any file over a few KB in a ConfigMap or Secret, and never split a file across several of them.
+- If an apply is rejected, fix the cause the message names. Do not work around a size or policy limit (switching to `create`, `--server-side`, splitting objects, dropping requests).
 
 ## Reference Files
 

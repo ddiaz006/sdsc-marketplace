@@ -1,7 +1,7 @@
 {
   "name": "nrp-nautilus",
   "description": "Run work on the National Research Platform's Nautilus Kubernetes cluster: access, NRP usage policies, Jobs and Indexed Jobs, GPUs, Ceph storage and S3, the managed LLM endpoint, and the patterns that keep a shared cluster healthy.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "ddiaz006 (UC San Diego / SDSC, National Research Platform)"
   },

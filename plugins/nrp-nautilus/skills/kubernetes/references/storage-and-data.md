@@ -76,6 +76,14 @@ Needed for PyTorch `DataLoader(num_workers>0)`, NCCL and many MPI codes.
 
 ## Moving Data
 
+Never move files through a ConfigMap or Secret. They are stored in etcd,
+capped at 1 MiB, and large ones degrade the control plane for every user of
+the cluster.
+
+**Local inputs for a Job**: create a PVC, start a helper pod that mounts it,
+`kubectl cp` the files in, delete the helper, then mount the PVC in the Job.
+The NRP skill has the full recipe (`nrp` → `references/storage.md`).
+
 **Small files, to or from a running pod** (needs `tar` in the image):
 
 ```bash

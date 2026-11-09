@@ -99,6 +99,36 @@ The AWS CLI can fail on multipart uploads of files above ~80 MB against this
 endpoint; use `rclone` or `s3cmd` for large files. Inside the cluster use the
 HTTP endpoint for the same pool, which avoids the public network.
 
+## Getting Local Files to a Job
+
+Input files on your machine go on a PVC, never in a ConfigMap or Secret (those
+live in the cluster's shared etcd database; large ones have taken the NRP API
+server down). For a few MB to a few GB:
+
+1. Create a CephFS PVC sized for the data (`assets/templates/pvc-cephfs.yaml`;
+   the commands below assume it is named `data-<username>`), in the region where
+   the Job will run.
+2. Start a small helper pod that mounts it, and wait for it:
+   ```bash
+   kubectl run upload-<username> --restart=Never --image=alpine:3.20 \
+     --overrides='{"spec":{"containers":[{"name":"upload","image":"alpine:3.20","command":["sh","-c","sleep 3600"],"volumeMounts":[{"name":"d","mountPath":"/data"}],"resources":{"requests":{"cpu":"100m","memory":"128Mi"},"limits":{"cpu":"100m","memory":"128Mi"}}}],"volumes":[{"name":"d","persistentVolumeClaim":{"claimName":"data-<username>"}}]}}'
+   kubectl wait --for=condition=Ready pod/upload-<username> --timeout=5m
+   ```
+   A `sleep` is allowed in a bare pod (not in a Job); the pod is deleted after
+   6 hours anyway.
+3. Copy the files in, check them, and delete the helper:
+   ```bash
+   kubectl cp ./data upload-<username>:/data/
+   kubectl exec upload-<username> -- ls -la /data
+   kubectl delete pod upload-<username>
+   ```
+4. Mount the same PVC in the Job (`volumes: [{name: data, persistentVolumeClaim: {claimName: data-<username>}}]`)
+   and have it write its results there too.
+
+A short script that is not in git can travel the same way, or be baked into an
+image. Larger datasets (tens of GB and up), or data several sites need: Ceph S3
+(next section), uploaded from your machine and read by the Job.
+
 ## Moving Results Off a Finished Job
 
 The pod's own filesystem is gone after the pod is deleted. Have the Job write
