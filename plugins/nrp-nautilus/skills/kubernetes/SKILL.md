@@ -191,6 +191,7 @@ More: `references/troubleshooting.md`.
 - Clean up: `ttlSecondsAfterFinished` on Jobs, and `kubectl delete` pods you no longer need. Requested GPUs stay reserved while the pod exists.
 - Before you apply to a shared cluster, show the user the manifest and the resources it requests.
 - Never put code, data or any file over a few KB in a ConfigMap or Secret, and never split a file across several of them.
+- Never add a toleration without a `key`. `operator: Exists` alone tolerates every taint, including control-plane, cordon and node-failure taints. Tolerate only a specific taint the user may use; if a pod is `Pending` on an untolerated taint, ask the user instead.
 - If an apply is rejected, fix the cause the message names. Do not work around a size or policy limit (switching to `create`, `--server-side`, splitting objects, dropping requests).
 
 ## Reference Files

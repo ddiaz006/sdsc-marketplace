@@ -30,7 +30,7 @@ Read the `Events` section of `kubectl describe pod`.
 | `Insufficient cpu` / `Insufficient memory` | No node has that much free | Lower requests or wait |
 | `Insufficient nvidia.com/gpu` | No free GPU of that kind | Wait, request fewer, or relax the GPU type |
 | `didn't match Pod's node affinity/selector` | Affinity excludes every node with room | Check label values: `kubectl get nodes -L <key>` |
-| `had untolerated taint` | Node is reserved | Add the toleration only if you are allowed to use those nodes |
+| `had untolerated taint` | Node is reserved or set aside | Tolerate that one taint by its `key`, and only if you are allowed to use those nodes. Never a key-less `operator: Exists`, which tolerates every taint |
 | `exceeded quota` | Namespace ResourceQuota reached | `kubectl describe resourcequota`; delete other workloads or ask for quota |
 | `persistentvolumeclaim … not found` / `unbound` | PVC missing or still provisioning | `kubectl get pvc` |
 | `Multi-Attach error` | A `ReadWriteOnce` volume is in use on another node | Stop the other pod |

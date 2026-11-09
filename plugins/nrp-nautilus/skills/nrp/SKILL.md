@@ -187,7 +187,8 @@ GPU of your own:
 - Show the user every manifest and the resources it requests before you apply it. NRP is shared, and underused requests count against the namespace.
 - Request only what the workload uses. Do not request a GPU for CPU work, or several GPUs unless one is near 100% utilized.
 - Use Jobs with `ttlSecondsAfterFinished` and `activeDeadlineSeconds`. Delete interactive pods as soon as you are done.
-- Do not add tolerations for reserved nodes (`nautilus.io/reservation`) unless the user's namespace is entitled to them.
+- Never tolerate every taint: no toleration with `operator: Exists` and no `key`. It also tolerates system taints, so the pod can land on cordoned, control-plane or reserved nodes, and it is not evicted from a node that fails. Tolerate only the specific taint you need, by `key` (for example `nautilus.io/arm64` for GH200).
+- Do not add tolerations for reserved nodes (`nautilus.io/reservation`) unless the user's namespace is entitled to them. If a pod is `Pending` on an untolerated taint, tell the user which taint rather than tolerating it.
 - Never print or write credential values (S3 keys, LLM tokens, kubeconfig tokens). Use Secrets.
 - Keep ConfigMaps to small settings files. Before you create one, check its size: `kubectl create configmap <name> --from-file=<f> --dry-run=client -o yaml | wc -c`. Over ~100 KB is a sign it holds code or data; use git, an image, a PVC or S3 instead.
 - Delete what you created when the work is done: Jobs (or rely on their TTL), helper pods, ConfigMaps, and PVCs you no longer need.
